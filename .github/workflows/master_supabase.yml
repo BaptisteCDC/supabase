@@ -1,0 +1,51 @@
+# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
+# More GitHub Actions for Azure: https://github.com/Azure/actions
+
+name: Build and deploy container app to Azure Web App - supabase
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: 'ubuntu-latest'
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Log in to registry
+      uses: docker/login-action@v2
+      with:
+        registry: https://ghcr.io/
+        username: ${{ secrets.AzureAppService_ContainerUsername_a160814ad62d4614a8baa8ef980fd966 }}
+        password: ${{ secrets.AzureAppService_ContainerPassword_c5428ec95c6f429e94c23ac7c0e93e39 }}
+
+    - name: Build and push container image to registry
+      uses: docker/build-push-action@v3
+      with:
+        push: true
+        tags: ghcr.io/${{ secrets.AzureAppService_ContainerUsername_a160814ad62d4614a8baa8ef980fd966 }}/baptistecdc/supabase:${{ github.sha }}
+        file: ./Dockerfile
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: 'production'
+      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
+
+    steps:
+    - name: Deploy to Azure Web App
+      id: deploy-to-webapp
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: 'supabase'
+        slot-name: 'production'
+        publish-profile: ${{ secrets.AzureAppService_PublishProfile_3c08c763091b404ab2b6665b631baaf1 }}
+        images: 'ghcr.io/${{ secrets.AzureAppService_ContainerUsername_a160814ad62d4614a8baa8ef980fd966 }}/baptistecdc/supabase:${{ github.sha }}'
